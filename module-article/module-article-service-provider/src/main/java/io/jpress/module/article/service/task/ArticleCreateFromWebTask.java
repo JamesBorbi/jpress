@@ -44,6 +44,7 @@ import io.jpress.module.article.service.utils.HttpUrlUtil;
 import io.jpress.service.AttachmentService;
 import io.jpress.service.MenuService;
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.*;
 import java.net.*;
@@ -59,7 +60,9 @@ import java.util.stream.Collectors;
  * @Package io.jpress.module.article.ta
  */
 //@FixedRate(period = 60 * 6, initialDelay = 60)
-@Cron(value = "10 15 * * *",daemon = true)
+//@Cron(value = "59 23 * * *",daemon = true)
+//@Cron(value = "16 16 * * *",daemon = true)
+@Cron(value = "11 4 * * *",daemon = true)
 public class ArticleCreateFromWebTask implements Runnable {
 
 
@@ -156,7 +159,7 @@ public class ArticleCreateFromWebTask implements Runnable {
      * @throws IOException
      */
     public void getPageList() throws IOException {
-        Integer pageNum = 3;
+        Integer pageNum = 1;
         for (Integer i = 0; i < pageNum; i++) {
             String pagePath = pageUrl+i;
             String pageInfo = HttpUrlUtil.doGetForJson(null,pagePath,cookie);
@@ -169,12 +172,22 @@ public class ArticleCreateFromWebTask implements Runnable {
 
             //查询asiamales是否已存在，不存在才新建文章
             articleUrlMap.forEach((title,detailUrl)->{
-                String keyWord = StrUtil.escapeHtml(title.trim());
+//                String keyWord = StrUtil.escapeHtml(title.trim());
+                String keyWord = "";
+                if(title.contains("+")){
+                    keyWord = title.split("\\+")[0];
+                }
+                if(keyWord.contains("/")){
+                    keyWord = keyWord.split("/")[0];
+                }
+                if(keyWord.contains("-")){
+                    keyWord = keyWord.split("-")[0];
+                }
                 ArticleSearcher searcher = ArticleSearcherFactory.getSearcher();
                 Page<Article> page = searcher.search(keyWord, pageNum, 20);
 
                 //文章已存在
-                if (page.getTotalRow() != 0) {
+                if (!CollectionUtil.isEmpty(page.getList())) {
                     return ;
                 }
 
@@ -259,7 +272,7 @@ public class ArticleCreateFromWebTask implements Runnable {
         article.setOrderNumber(0);
         article.setCreated(new Date());
         article.setCommentStatus(true);
-        article.setThumbnail(thumbnail);
+//        article.setThumbnail(thumbnail);
 
         //保存文章
         this.doWriteSaveForBluedimgs(article,categoryList);

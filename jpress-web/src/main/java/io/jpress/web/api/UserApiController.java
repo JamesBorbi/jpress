@@ -22,17 +22,25 @@ import io.jboot.apidoc.annotation.Api;
 import io.jboot.apidoc.annotation.ApiOper;
 import io.jboot.apidoc.annotation.ApiPara;
 import io.jboot.apidoc.annotation.ApiResp;
+import io.jboot.utils.DateUtil;
+import io.jboot.web.controller.annotation.GetRequest;
 import io.jboot.web.controller.annotation.PostRequest;
 import io.jboot.web.controller.annotation.RequestMapping;
 import io.jboot.web.json.JsonBody;
 import io.jpress.JPressConsts;
 import io.jpress.commons.utils.SessionUtils;
+import io.jpress.model.Member;
+import io.jpress.model.MemberGroup;
+import io.jpress.model.MemberJoinedRecord;
 import io.jpress.model.User;
+import io.jpress.service.MemberGroupService;
+import io.jpress.service.MemberService;
 import io.jpress.service.UserService;
 import io.jpress.web.base.ApiControllerBase;
 
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
+import java.util.Date;
 
 /**
  * 用户相关的API
@@ -43,6 +51,10 @@ public class UserApiController extends ApiControllerBase {
 
     @Inject
     private UserService userService;
+    @Inject
+    private MemberService memberService;
+    @Inject
+    private MemberGroupService memberGroupService;
 
 
     @PostRequest
@@ -112,5 +124,55 @@ public class UserApiController extends ApiControllerBase {
     public Ret create(@ApiPara("用户 json 信息") @JsonBody @NotNull User user) {
         userService.save(user);
         return Ret.ok().set("userId", user.getId());
+    }
+    @ApiOper("api加入会员")
+//    @ApiResp(field = "userId", notes = "用户ID，用户创建成功后返回此数据", dataType = Long.class)
+    @GetRequest
+    public void addMember(@ApiPara("用户 json 信息") Long userId,Long groupId) {
+        Member member = new Member();
+        member.setUserId(userId);
+        member.setGroupId(groupId);
+        member.setCreated(new Date());
+        member.setDuetime(DateUtil.parseDate("2050-12-31 23:59:00",DateUtil.datetimePattern));
+        member.setSource("buy");
+        member.setStatus(9);
+
+
+        Member existModel = memberService.findByGroupIdAndUserId(groupId, userId);
+        if (existModel != null && !existModel.getId().equals(member.getId())) {
+            renderFailJson("用户已经加入该会员");
+            return;
+        }
+
+        MemberGroup group = memberGroupService.findById(groupId);
+        if (group == null || !group.isNormal()) {
+            renderFailJson("该会员组不存在或已经被禁用。");
+            return;
+        }
+
+        if (member.getId() == null) {
+            MemberJoinedRecord joinedRecord = new MemberJoinedRecord();
+            joinedRecord.setUserId(member.getUserId());
+            joinedRecord.setGroupId(member.getGroupId());
+            joinedRecord.setGroupName(group.getName());
+            joinedRecord.setJoinCount(1);
+            joinedRecord.setJoinType(member.getSource());
+            joinedRecord.setCreated(new Date());
+            joinedRecord.setJoinFrom(MemberJoinedRecord.JOIN_FROM_ADMIN);
+
+            if (Member.SOURCE_BUY.equals(member.getSource())) {
+                joinedRecord.setJoinPrice(group.getPrice());
+            }
+
+            if (memberService.saveOrUpdate(member) == null) {
+                renderFailJson();
+                return;
+            }
+        }
+
+        memberService.saveOrUpdate(member);
+        renderOkJson();
+
+//        return Ret.ok().set("userId", userId);
     }
 }

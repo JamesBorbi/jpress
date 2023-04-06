@@ -85,6 +85,8 @@ public class MemberController extends UcenterControllerBase {
 
     public void join() {
         MemberGroup memberGroup = memberGroupService.findById(getPara());
+        //用户id
+        memberGroup.setFlag(getLoginedUser().getId().toString());
         PayConfigUtil.setConfigAttrs(this);
         setAttr("memberGroup", memberGroup);
         render("member/member_join.html");

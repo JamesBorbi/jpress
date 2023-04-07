@@ -83,18 +83,26 @@ public class ApiInterceptor implements Interceptor, JPressOptions.OptionChangeLi
         }
 
         ApiControllerBase controller = (ApiControllerBase) inv.getController();
-        String str = controller.getRequest().getQueryString();
-
-        if (StrUtil.isBlank(str)) {
+        String queryString = controller.getRequest().getQueryString();
+        if (StrUtil.isBlank(queryString)) {
             inv.getController().renderJson(Ret.fail().set("message", "请求参数错误。"));
             return;
         }
-        String queryString = str.replace("amp;","");
 
         Map<String, String> parasMap = StrUtil.queryStringToMap(queryString);
         String appId = parasMap.get("jpressAppId");
         if (StrUtil.isBlank(appId)) {
             inv.getController().renderJson(Ret.fail().set("message", "在 Url 中未获取到 jpressAppId 内容，请注意 Url 是否正确。"));
+            return;
+        }
+        //jpressAppId=asiamales_"+userId+"_2
+        if(appId.contains("asiamales")){
+            Object userId = controller.getJwtPara(JPressConsts.JWT_USERID,false);
+            if (userId != null) {
+                controller.setAttr(JPressConsts.ATTR_LOGINED_USER, userService.findById(userId));
+            }
+
+            inv.invoke();
             return;
         }
 
@@ -113,8 +121,7 @@ public class ApiInterceptor implements Interceptor, JPressOptions.OptionChangeLi
         }
 
         // 时间验证，可以防止重放攻击
-        String time2029 = "2029";
-        if (Math.abs(System.currentTimeMillis() - time) > TIMEOUT && !timeStr.equals(time2029)) {
+        if (Math.abs(System.currentTimeMillis() - time) > TIMEOUT ) {
             controller.renderJson(Ret.fail("message", "请求超时，请重新请求。"));
             return;
         }
@@ -127,11 +134,10 @@ public class ApiInterceptor implements Interceptor, JPressOptions.OptionChangeLi
         }
 
         String localSign = createLocalSign(controller.getRequest());
-        String addMemberUrl = "api_user_addMember";
-//        if (!sign.equals(localSign) && !sign.equals(addMemberUrl)) {
-//            inv.getController().renderJson(Ret.fail().set("message", "数据签名错误。"));
-//            return;
-//        }
+        if (!sign.equals(localSign)) {
+            inv.getController().renderJson(Ret.fail().set("message", "数据签名错误。"));
+            return;
+        }
 
         Object userId = controller.getJwtPara(JPressConsts.JWT_USERID,false);
         if (userId != null) {

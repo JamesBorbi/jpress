@@ -128,7 +128,13 @@ public class UserApiController extends ApiControllerBase {
     @ApiOper("api加入会员")
 //    @ApiResp(field = "userId", notes = "用户ID，用户创建成功后返回此数据", dataType = Long.class)
     @GetRequest
-    public void addMember(@ApiPara("用户 json 信息") Long userId,Long groupId) {
+    public void addMember(@ApiPara("用户 json 信息") String jpressAppId) {
+
+        //jpressAppId=asiamales_"+userId+"_2
+        String[] strs = jpressAppId.split("_");
+        Long userId = Long.valueOf(strs[1]);
+        Long groupId = Long.valueOf(strs[2]);
+
         Member member = new Member();
         member.setUserId(userId);
         member.setGroupId(groupId);

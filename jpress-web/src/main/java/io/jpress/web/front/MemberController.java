@@ -25,15 +25,18 @@ import io.jboot.web.validate.Form;
 import io.jpress.JPressConsts;
 import io.jpress.commons.pay.PayConfigUtil;
 import io.jpress.commons.pay.PayStatus;
+import io.jpress.commons.utils.SessionUtils;
 import io.jpress.core.menu.annotation.UCenterMenu;
 import io.jpress.model.Member;
 import io.jpress.model.MemberGroup;
 import io.jpress.model.PaymentRecord;
+import io.jpress.model.User;
 import io.jpress.service.MemberGroupService;
 import io.jpress.service.MemberService;
 import io.jpress.service.PaymentRecordService;
 import io.jpress.service.UserService;
 import io.jpress.web.base.UcenterControllerBase;
+import io.jpress.web.interceptor.UserInterceptor;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -86,7 +89,8 @@ public class MemberController extends UcenterControllerBase {
     public void join() {
         MemberGroup memberGroup = memberGroupService.findById(getPara());
         //用户id
-        memberGroup.setFlag(getLoginedUser().getId().toString());
+
+        memberGroup.setUserId(getLoginedUser().getId());
         PayConfigUtil.setConfigAttrs(this);
         setAttr("memberGroup", memberGroup);
         render("member/member_join.html");
